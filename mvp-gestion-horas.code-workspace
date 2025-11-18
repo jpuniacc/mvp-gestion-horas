@@ -1,0 +1,23 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"sqltools.connections": [
+			{
+				"ssh": "Disabled",
+				"previewLimit": 50,
+				"server": "aws-1-us-east-1.pooler.supabase.com",
+				"driver": "PostgreSQL",
+				"name": "gestion_horas",
+				"group": "Eduti",
+				"database": "postgres",
+				"username": "postgres",
+				"password": "Perrobotill0",
+				"connectString": "postgresql://postgres:[YOUR_PASSWORD]@db.kgavprsjxhxjzvbhotig.supabase.co:5432/postgres"
+			}
+		]
+	}
+}
