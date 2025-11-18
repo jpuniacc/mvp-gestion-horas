@@ -11,12 +11,52 @@ export const useTimesheetStore = defineStore('timesheet', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  const entries2Approved = ref<TimesheetWeek[]>([]);
+
   const totalHours = computed(() => {
     return entries.value.reduce((sum, e) => {
       const total = e.total_hours
       return sum + (typeof total === 'number' ? total : 0)
     }, 0)
   })
+
+  async function loadEntries2Approved(projectId: string){
+    try{
+      loading.value = true
+      error.value = null
+
+      const { data, error: entriesError } = await supabase
+        .from('timesheet_weeks')
+        .select(`year, 
+                 week_number, 
+                 timesheet_entries!inner(
+                   hours_monday,
+                   hours_tuesday,
+                   hours_wednesday,
+                   hours_thursday,
+                   hours_friday,
+                   hours_saturday,
+                   hours_sunday,
+                   total_hours,
+                   tasks!inner(
+                    name,
+                    code
+                   ),
+                   
+                )`)
+        .eq('timesheet_entries.project_id', projectId)
+        .order('created_at', { ascending: true })
+
+      if (entriesError) throw entriesError
+      entries2Approved.value = data || []
+      
+    }catch(err: any){
+      console.error('Error loading entries2Aproved:', err)
+      error.value = err.message || 'Error al cargar entradas2Aproved'
+    }finally{
+      loading.value = false
+    }
+  }
 
   async function loadWeek(year: number, week: number) {
     if (!authStore.user?.id) {
@@ -343,10 +383,12 @@ export const useTimesheetStore = defineStore('timesheet', () => {
   return {
     currentWeek,
     entries,
+    entries2Approved,
     loading,
     error,
     totalHours,
     loadWeek,
+    loadEntries2Approved,
     saveEntry,
     submitWeek,
     deleteEntry,

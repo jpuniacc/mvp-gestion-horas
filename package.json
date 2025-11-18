@@ -9,15 +9,18 @@
     "type-check": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@primeuix/themes": "^1.2.5",
     "@supabase/supabase-js": "^2.39.3",
-    "date-fns": "^3.0.6",
-    "pinia": "^2.1.7",
-    "radix-vue": "^1.9.0",
-    "vue": "^3.4.15",
-    "vue-router": "^4.2.5",
     "@vueuse/core": "^10.7.2",
     "clsx": "^2.1.0",
-    "tailwind-merge": "^2.2.1"
+    "date-fns": "^3.0.6",
+    "pinia": "^2.1.7",
+    "primeicons": "^7.0.0",
+    "primevue": "^4.4.1",
+    "radix-vue": "^1.9.0",
+    "tailwind-merge": "^2.2.1",
+    "vue": "^3.4.15",
+    "vue-router": "^4.2.5"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.3",
@@ -29,4 +32,3 @@
     "vue-tsc": "^1.8.27"
   }
 }
-

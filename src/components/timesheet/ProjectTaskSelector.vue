@@ -42,7 +42,7 @@ const availableProjects = computed(() => {
 
 const availableTasks = computed(() => {
   if (!selectedProjectId.value) return []
-  return projectsStore.getTasksForProject.value(selectedProjectId.value)
+  return projectsStore.getTasksForProject(selectedProjectId.value)
 })
 
 const selectedAssignment = computed(() => {
