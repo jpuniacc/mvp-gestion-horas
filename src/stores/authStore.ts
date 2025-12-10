@@ -25,7 +25,6 @@ export const useAuthStore = defineStore('auth', () => {
         email,
         password,
       })
-      await supabase.auth.signUp()
 
       if (authError) throw authError
 
