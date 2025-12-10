@@ -9,13 +9,13 @@ export const useReportsStore = defineStore('reports', () => {
 
   async function getReporteHorasProyecto(params: {
     p_project_id: string
-    p_year: number
-    p_week: number
+    p_start: string
+    p_end: string | null
   }) {
-    const { p_project_id, p_year, p_week } = params
+    const { p_project_id, p_start, p_end } = params
 
-    if (!p_project_id || !p_year || !p_week) {
-      error.value = 'Todos los parámetros son requeridos'
+    if (!p_project_id || !p_start) {
+      error.value = 'p_project_id y p_start son requeridos'
       return []
     }
 
@@ -23,14 +23,16 @@ export const useReportsStore = defineStore('reports', () => {
       loading.value = true
       error.value = null
 
+      const rpcParams: any = {
+        p_project_id,
+        p_start,
+        p_end, // Siempre enviar p_end, puede ser null
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error: rpcError } = await (supabase.rpc as any)(
         'rpc_reporte_horas_projecto',
-        {
-          p_project_id,
-          p_year,
-          p_week,
-        }
+        rpcParams
       )
 
       if (rpcError) {
