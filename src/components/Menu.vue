@@ -121,7 +121,7 @@ const filteredItems = computed(() => {
 
 <template>
     <div class="flex items-center gap-4">
-        <h1 class="text-xl font-semibold">Timesheet MVP</h1>
+        <h1 class="text-lg font-semibold">Timesheet MVP</h1>
         <MenuBar :model="filteredItems">
             <template #item="{ item, props, hasSubmenu }">
                 <router-link 
@@ -150,16 +150,66 @@ const filteredItems = computed(() => {
 </template>
 
 <style scoped>
-:deep(.p-menubar-root-list) {
-    display: flex;
-    gap: 0.5rem;
+/* Reducir tamaño general del menú */
+:deep(.p-menubar) {
+    padding: 0.25rem 0;
 }
 
+/* Reducir espaciado entre items del menú principal */
+:deep(.p-menubar-root-list) {
+    display: flex;
+    gap: 0.25rem;
+}
+
+/* Reducir padding y tamaño de fuente de cada item */
 :deep(.p-menubar-root-list > .p-menuitem) {
     position: relative;
 }
 
+/* Sobrescribir el padding excesivo con mayor especificidad */
+:deep(.p-menubar-root-list > .p-menubar-item > .p-menubar-item-content > .p-menubar-item-link) {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+}
+
+:deep(.p-menubar-root-list > .p-menuitem > .p-menuitem-link) {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+}
+
+/* Reducir tamaño del texto en los links */
+:deep(.p-menubar-root-list .p-menuitem-link span) {
+    font-size: 0.875rem;
+}
+
+/* Reducir tamaño de los submenús */
 :deep(.p-submenu-list) {
-    min-width: 200px;
+    min-width: 180px;
+    padding: 0.25rem 0;
+}
+
+:deep(.p-submenu-list .p-menuitem-link) {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+}
+
+/* Reducir tamaño de iconos si los hay */
+:deep(.p-menubar-root-list .pi) {
+    font-size: 0.75rem;
+}
+
+/* Asegurar que los links del menú sean compactos */
+:deep(.p-menubar-root-list a) {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.875rem;
+    text-decoration: none;
+}
+
+/* Reducir espaciado en el contenedor principal */
+.flex.items-center {
+    gap: 1rem;
 }
 </style>
