@@ -281,6 +281,43 @@ export const useTimesheetStore = defineStore('timesheet', () => {
     }
   }
 
+  async function approveWeek(timesheetWeekId: string) {
+    if (!authStore.user?.id) {
+      throw new Error('Usuario no autenticado')
+    }
+
+    try {
+      loading.value = true
+      error.value = null
+
+      const { data, error: approveError } = await supabase
+        .from('timesheet_weeks')
+        .update({
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+          approved_by: authStore.user.id,
+        })
+        .eq('id', timesheetWeekId)
+        .select()
+        .single()
+
+      if (approveError) throw approveError
+
+      // Si es la semana actual, actualizar el estado
+      if (currentWeek.value && currentWeek.value.id === timesheetWeekId) {
+        currentWeek.value = data
+      }
+
+      return data
+    } catch (err: any) {
+      console.error('Error approving week:', err)
+      error.value = err.message || 'Error al aprobar semana'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function deleteEntry(entryId: string) {
     try {
       loading.value = true
@@ -391,6 +428,7 @@ export const useTimesheetStore = defineStore('timesheet', () => {
     loadEntries2Approved,
     saveEntry,
     submitWeek,
+    approveWeek,
     deleteEntry,
     copyPreviousWeek,
   }

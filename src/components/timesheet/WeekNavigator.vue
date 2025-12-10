@@ -1,6 +1,20 @@
 <script setup lang="ts">
 import Button from '@/components/ui/Button.vue'
 import { useWeekNavigation } from '@/composables/useWeekNavigation'
+import type { UseWeekNavigationReturn } from '@/composables/useWeekNavigation'
+
+interface Props {
+  syncWithRouter?: boolean
+  navigation?: UseWeekNavigationReturn
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  syncWithRouter: true,
+  navigation: undefined,
+})
+
+const navigation =
+  props.navigation ?? useWeekNavigation({ syncWithRouter: props.syncWithRouter })
 
 const {
   currentYear,
@@ -9,7 +23,7 @@ const {
   nextWeek,
   previousWeek,
   goToCurrentWeek,
-} = useWeekNavigation()
+} = navigation
 </script>
 
 <template>

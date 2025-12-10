@@ -1,12 +1,17 @@
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getWeek, startOfWeek, addWeeks, format } from 'date-fns'
 
-export function useWeekNavigation() {
+interface WeekNavigationOptions {
+  syncWithRouter?: boolean
+}
+
+export function useWeekNavigation(options: WeekNavigationOptions = {}) {
+  const { syncWithRouter = true } = options
   const route = useRoute()
   const router = useRouter()
 
-  const currentYear = computed(() => {
+  const routeYear = computed(() => {
     const yearParam = route.params.year as string
     if (yearParam) {
       return parseInt(yearParam)
@@ -14,7 +19,7 @@ export function useWeekNavigation() {
     return new Date().getFullYear()
   })
 
-  const currentWeek = computed(() => {
+  const routeWeek = computed(() => {
     const weekParam = route.params.week as string
     if (weekParam) {
       return parseInt(weekParam)
@@ -22,6 +27,13 @@ export function useWeekNavigation() {
     const now = new Date()
     return getWeek(now, { weekStartsOn: 1 })
   })
+
+  const localYear = ref(routeYear.value)
+  const localWeek = ref(routeWeek.value)
+
+  const currentYear = computed(() => syncWithRouter ? routeYear.value : localYear.value)
+
+  const currentWeek = computed(() => syncWithRouter ? routeWeek.value : localWeek.value)
 
   const currentWeekStart = computed(() => {
     const year = currentYear.value
@@ -48,6 +60,15 @@ export function useWeekNavigation() {
     return `${format(start, 'd MMM')} - ${format(end, 'd MMM yyyy')}`
   })
 
+  function navigateToWeek(year: number, week: number) {
+    if (syncWithRouter) {
+      router.push(`/timesheet/week/${year}/${week}`)
+      return
+    }
+    localYear.value = year
+    localWeek.value = week
+  }
+
   function nextWeek() {
     let newYear = currentYear.value
     let newWeek = currentWeek.value + 1
@@ -57,7 +78,7 @@ export function useWeekNavigation() {
       newYear++
     }
 
-    router.push(`/timesheet/week/${newYear}/${newWeek}`)
+    navigateToWeek(newYear, newWeek)
   }
 
   function previousWeek() {
@@ -69,18 +90,18 @@ export function useWeekNavigation() {
       newYear--
     }
 
-    router.push(`/timesheet/week/${newYear}/${newWeek}`)
+    navigateToWeek(newYear, newWeek)
   }
 
   function goToWeek(year: number, week: number) {
-    router.push(`/timesheet/week/${year}/${week}`)
+    navigateToWeek(year, week)
   }
 
   function goToCurrentWeek() {
     const now = new Date()
     const year = now.getFullYear()
     const week = getWeek(now, { weekStartsOn: 1 })
-    goToWeek(year, week)
+    navigateToWeek(year, week)
   }
 
   return {
@@ -95,4 +116,6 @@ export function useWeekNavigation() {
     goToCurrentWeek,
   }
 }
+
+export type UseWeekNavigationReturn = ReturnType<typeof useWeekNavigation>
 

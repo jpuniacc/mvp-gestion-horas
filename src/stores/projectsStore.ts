@@ -2,19 +2,20 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from './authStore'
-import type { Project, ProjectAssignment, Task } from '@/types'
+import type { Project, ProjectAssignment, Task, TimesheetEntry } from '@/types'
 
 export const useProjectsStore = defineStore('projects', () => {
   const authStore = useAuthStore()
   const projects = ref<Project[]>([])
   const assignments = ref<ProjectAssignment[]>([])
   const tasks = ref<Task[]>([])
+  const assignableUsers = ref<any[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
 
   // Proyectos activos
   const activeProjects = computed(() => {
-    return projects.value.filter(p => p.status === 'active')
+    return projects.value.filter((p: Project) => p.status === 'active')
   })
 
   // Asignaciones activas del usuario actual (filtradas por fecha)
@@ -23,7 +24,7 @@ export const useProjectsStore = defineStore('projects', () => {
     
     const now = new Date().toISOString().split('T')[0]
     
-    return assignments.value.filter(a => {
+    return assignments.value.filter((a: ProjectAssignment) => {
       if (a.user_id !== authStore.user!.id) return false
       if (!a.start_date) return false
       if (a.start_date > now) return false
@@ -34,8 +35,8 @@ export const useProjectsStore = defineStore('projects', () => {
 
   // Proyectos asignados al usuario actual
   const assignedProjects = computed(() => {
-    const assignedProjectIds = new Set(activeAssignments.value.map(a => a.project_id))
-    return activeProjects.value.filter(p => assignedProjectIds.has(p.id))
+    const assignedProjectIds = new Set(activeAssignments.value.map((a: ProjectAssignment) => a.project_id))
+    return activeProjects.value.filter((p: Project) => assignedProjectIds.has(p.id))
   })
 
   // Tareas globales y por proyecto
@@ -43,12 +44,12 @@ export const useProjectsStore = defineStore('projects', () => {
     return (projectId?: string) => {
       if (projectId) {
         // Tareas del proyecto + tareas globales
-        return tasks.value.filter(t => 
+        return tasks.value.filter((t: Task) => 
           (t.project_id === projectId || t.is_global) && t.is_active
         )
       }
       // Solo tareas globales si no hay proyecto
-      return tasks.value.filter(t => t.is_global && t.is_active)
+      return tasks.value.filter((t: Task) => t.is_global && t.is_active)
     }
   })
 
@@ -143,24 +144,226 @@ export const useProjectsStore = defineStore('projects', () => {
   }
 
   function getProjectById(projectId: string): Project | undefined {
-    return projects.value.find(p => p.id === projectId)
+    return projects.value.find((p: Project) => p.id === projectId)
   }
 
   function getTaskById(taskId: string): Task | undefined {
-    return tasks.value.find(t => t.id === taskId)
+    return tasks.value.find((t: Task) => t.id === taskId)
   }
 
   function getAssignmentForProject(projectId: string): ProjectAssignment | undefined {
     if (!authStore.user?.id) return undefined
-    return activeAssignments.value.find(a => 
+    return activeAssignments.value.find((a: ProjectAssignment) => 
       a.project_id === projectId && a.user_id === authStore.user!.id
     )
+  }
+
+  async function loadTimesheetEntriesForWeek(params: {
+    userId: string
+    projectId: string
+    year: number
+    week: number
+  }) {
+    const { userId, projectId, year, week } = params
+
+    if (!userId || !projectId) {
+      return []
+    }
+
+    try {
+      loading.value = true
+      error.value = null
+
+      const { data, error: entriesError } = await supabase
+        .from('timesheet_entries')
+        .select(`
+          *,
+          timesheet_weeks!inner (
+            id,
+            year,
+            week_number,
+            status,
+            user_id
+          ),
+          tasks!inner (
+            id,
+            name,
+            code
+          )
+        `)
+        .eq('project_id', projectId)
+        .eq('timesheet_weeks.user_id', userId)
+        .eq('timesheet_weeks.year', year)
+        .eq('timesheet_weeks.week_number', week)
+        .eq('timesheet_weeks.status', 'submitted')
+
+      if (entriesError) {
+        throw entriesError
+      }
+
+      return data as (TimesheetEntry & {
+        tasks: Pick<Task, 'id' | 'name' | 'code'>
+        timesheet_weeks: {
+          id: string
+          year: number
+          week_number: number
+          status: string
+          user_id: string
+        }
+      })[]
+    } catch (err: any) {
+      console.error('Error loading timesheet entries:', err)
+      error.value = err.message ?? 'Error al cargar tiempos del usuario'
+      return []
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function loadAssignableUsers(projectId: string) {
+    if (!projectId) {
+      assignableUsers.value = []
+      return []
+    }
+
+    try {
+      loading.value = true
+      error.value = null
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error: rpcError } = await (supabase.rpc as any)(
+        'usuarios_asignables_projecto',
+        { p_project_id: projectId }
+      )
+
+      if (rpcError) {
+        throw rpcError
+      }
+
+      assignableUsers.value = data || []
+      return assignableUsers.value
+    } catch (err: any) {
+      console.error('Error loading assignable users:', err)
+      error.value = err.message ?? 'Error al cargar usuarios asignables'
+      assignableUsers.value = []
+      return []
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function createProjectAssignment(params: {
+    userId: string
+    projectId: string
+    role?: string
+    costRate?: number | null
+    billingRate?: number | null
+    isBillable?: boolean
+    startDate?: Date | null
+    endDate?: Date | null
+  }) {
+    const { userId, projectId, role, costRate, billingRate, isBillable, startDate, endDate } = params
+
+    if (!userId || !projectId) {
+      throw new Error('user_id y project_id son requeridos')
+    }
+
+    try {
+      loading.value = true
+      error.value = null
+
+      // Convertir fechas a formato ISO string (YYYY-MM-DD)
+      // start_date es requerido, usar fecha actual si no se proporciona
+      const startDateISO = startDate 
+        ? startDate.toISOString().split('T')[0] 
+        : new Date().toISOString().split('T')[0]
+      const endDateISO = endDate ? endDate.toISOString().split('T')[0] : null
+
+      const { data, error: insertError } = await supabase
+        .from('project_assignments')
+        .insert({
+          user_id: userId,
+          project_id: projectId,
+          role_name: role || '',
+          cost_rate: costRate ?? null,
+          billing_rate: billingRate ?? null,
+          is_billable: isBillable ?? null,
+          start_date: startDateISO,
+          end_date: endDateISO,
+          created_by: authStore.user?.id || null,
+        })
+        .select()
+        .single()
+
+      if (insertError) {
+        throw insertError
+      }
+
+      return data as ProjectAssignment
+    } catch (err: any) {
+      console.error('Error creating project assignment:', err)
+      error.value = err.message ?? 'Error al crear asignación de proyecto'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function updateProjectAssignment(
+    assignmentId: string,
+    params: {
+      role?: string
+      costRate?: number | null
+      billingRate?: number | null
+      isBillable?: boolean
+      startDate?: Date | null
+      endDate?: Date | null
+    }
+  ) {
+    const { role, costRate, billingRate, isBillable, startDate, endDate } = params
+
+    try {
+      loading.value = true
+      error.value = null
+
+      // Convertir fechas a formato ISO string (YYYY-MM-DD)
+      const startDateISO = startDate ? startDate.toISOString().split('T')[0] : undefined
+      const endDateISO = endDate ? endDate.toISOString().split('T')[0] : undefined
+
+      const updateData: any = {}
+      if (role !== undefined) updateData.role_name = role || ''
+      if (costRate !== undefined) updateData.cost_rate = costRate ?? null
+      if (billingRate !== undefined) updateData.billing_rate = billingRate ?? null
+      if (isBillable !== undefined) updateData.is_billable = isBillable ?? null
+      if (startDateISO !== undefined) updateData.start_date = startDateISO
+      if (endDateISO !== undefined) updateData.end_date = endDateISO
+
+      const { data, error: updateError } = await supabase
+        .from('project_assignments')
+        .update(updateData)
+        .eq('id', assignmentId)
+        .select()
+        .single()
+
+      if (updateError) {
+        throw updateError
+      }
+
+      return data as ProjectAssignment
+    } catch (err: any) {
+      console.error('Error updating project assignment:', err)
+      error.value = err.message ?? 'Error al actualizar asignación de proyecto'
+      throw err
+    } finally {
+      loading.value = false
+    }
   }
 
   return {
     projects,
     assignments,
     tasks,
+    assignableUsers,
     loading,
     error,
     activeProjects,
@@ -174,6 +377,10 @@ export const useProjectsStore = defineStore('projects', () => {
     getProjectById,
     getTaskById,
     getAssignmentForProject,
+    loadTimesheetEntriesForWeek,
+    loadAssignableUsers,
+    createProjectAssignment,
+    updateProjectAssignment,
   }
 })
 

@@ -40,3 +40,7 @@ export type TimesheetWeekUpdate = TableUpdate<'timesheet_weeks'>
 export type TimesheetEntryUpdate = TableUpdate<'timesheet_entries'>
 export type OrgSettingUpdate = TableUpdate<'org_settings'>
 
+// Function types
+export type RpcResult<TName extends keyof Database['public']['Functions']> =
+  Database['public']['Functions'][TName]['Returns']
+

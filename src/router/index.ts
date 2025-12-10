@@ -28,13 +28,19 @@ const routes = [
     path: '/approvals',
     name: 'approvals',
     component: () => import('@/views/ApprovalsView.vue'),
-    meta: { requiresAuth: true, roles: ['admin', 'pm'] },
+    meta: { requiresAuth: true, roles: ['admin', 'pm', 'ops'] },
+  },
+  {
+    path: '/users',
+    name: 'users',
+    component: () => import('@/views/UsersView.vue'),
+    meta: { requiresAuth: true, roles: ['admin', 'pm', 'ops'] },
   },
   {
     path: '/projects',
     name: 'projects',
     component: () => import('@/views/ProjectsView.vue'),
-    meta: { requiresAuth: true, roles: ['admin', 'pm'] },
+    meta: { requiresAuth: true, roles: ['admin', 'pm', 'ops'] },
   },
   {
     path: '/reports',
