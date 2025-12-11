@@ -51,13 +51,13 @@ const menuItems: MenuItem[] = [
         roles: ['admin', 'pm', 'ops'],
         items: [
             {
-                label: 'Reportes Generales',
+                label: 'Reportes Hora',
                 to: '/reports',
-                roles: ['admin', 'pm', 'ops']
+                roles: ['admin', 'pm']
             },
             {
-                label: 'Reportes por Proyecto',
-                to: '/reports/projects',
+                label: 'Reportes Costo',
+                to: '/reportsCost',
                 roles: ['admin', 'pm']
             }
         ]

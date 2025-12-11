@@ -32,17 +32,27 @@ export const useUsersStore = defineStore('users', () => {
       loading.value = true
       error.value = null
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error: queryError } = await (supabase.rpc as any)(
-        'get_project_assignments_with_user',
-        { project_id: projectId }
-      )
+      const { data, error: queryError } = await supabase
+        .from('project_assignments')
+        .select(`
+          *,
+          profiles!inner(full_name, role)
+        `)
+        .eq('project_id', projectId)
+        .in('profiles.role', ['ops', 'pm'])
 
       if (queryError) {
         throw queryError
       }
 
-      projectUsers.value = (data as ProjectUser[]) || []
+      // Transformar los datos para incluir full_name directamente en el objeto
+      const transformedData = (data || []).map((item: any) => ({
+        ...item,
+        full_name: item.profiles?.full_name || null,
+        role_name: item.role_name || null,
+      }))
+
+      projectUsers.value = transformedData as ProjectUser[]
     } catch (err: any) {
       console.error('Error loading project users:', err)
       error.value = err.message ?? 'Error al cargar usuarios del proyecto'

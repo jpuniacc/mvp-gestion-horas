@@ -43,9 +43,21 @@ const routes = [
     meta: { requiresAuth: true, roles: ['admin', 'pm', 'ops'] },
   },
   {
+    path: '/empresas',
+    name: 'empresas',
+    component: () => import('@/views/EmpresasView.vue'),
+    meta: { requiresAuth: true, roles: ['admin', 'pm', 'ops'] },
+  },
+  {
     path: '/reports',
     name: 'reports',
     component: () => import('@/views/ReportsView.vue'),
+    meta: { requiresAuth: true, roles: ['admin', 'pm', 'ops'] },
+  },
+  {
+    path: '/reportsCost',
+    name: 'reportsCost',
+    component: () => import('@/views/ReportsCost.vue'),
     meta: { requiresAuth: true, roles: ['admin', 'pm', 'ops'] },
   },
   {

@@ -2,6 +2,7 @@
 import { useProjectsStore } from '@/stores/projectsStore';
 import { useUsersStore } from '@/stores/usersStore';
 import { useTaskStore } from '@/stores/taskStore';
+import { useEmpresasStore } from '@/stores/empresasStore';
 import { computed, onMounted, ref, watch } from 'vue';
 import type { Project, Task } from '@/types';
 import Select from 'primevue/select';
@@ -14,6 +15,7 @@ import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
+import Textarea from 'primevue/textarea';
 import ToggleSwitch from 'primevue/toggleswitch';
 import Paginator from 'primevue/paginator';
 import Calendar from 'primevue/calendar';
@@ -22,9 +24,11 @@ import Header from '@/components/Header.vue';
 const projectsStore = useProjectsStore()
 const usersStore = useUsersStore()
 const taskStore = useTaskStore()
+const empresasStore = useEmpresasStore()
 const selectedProjectId = ref<string>('')
 const showAssignUserDialog = ref(false)
 const showCreateTaskDialog = ref(false)
+const showCreateProjectDialog = ref(false)
 const showGlobalTasks = ref(false)
 const editingTaskId = ref<string | null>(null)
 const editingAssignmentId = ref<string | null>(null)
@@ -46,6 +50,17 @@ const createTaskForm = ref({
   name: '',
   isGlobal: false,
   isActive: true,
+})
+
+// Formulario de creación de proyecto
+const createProjectForm = ref({
+  empresa_rut: '',
+  name: '',
+  code: '',
+  year: new Date().getFullYear(),
+  client_name: '',
+  description: '',
+  is_billable_default: true,
 })
 
 
@@ -96,6 +111,7 @@ const groupedProjects = computed(() => {
 onMounted(async () => {
   await projectsStore.loadProjects()
   await taskStore.loadGlobalTasks()
+  await empresasStore.loadEmpresas()
 });
 
 watch(selectedProjectId, async (newProjectId) => {
@@ -305,6 +321,60 @@ function handleTaskPageChange(event: { first: number; rows: number }) {
   taskPagination.value.first = event.first
   taskPagination.value.rows = event.rows
 }
+
+function openCreateProjectDialog() {
+  createProjectForm.value = {
+    empresa_rut: '',
+    name: '',
+    code: '',
+    year: new Date().getFullYear(),
+    client_name: '',
+    description: '',
+    is_billable_default: true,
+  }
+  showCreateProjectDialog.value = true
+}
+
+function closeCreateProjectDialog() {
+  showCreateProjectDialog.value = false
+  createProjectForm.value = {
+    empresa_rut: '',
+    name: '',
+    code: '',
+    year: new Date().getFullYear(),
+    client_name: '',
+    description: '',
+    is_billable_default: true,
+  }
+}
+
+async function handleCreateProject() {
+  if (!createProjectForm.value.empresa_rut || !createProjectForm.value.name || !createProjectForm.value.code || !createProjectForm.value.year) {
+    alert('Por favor completa todos los campos requeridos')
+    return
+  }
+
+  try {
+    await projectsStore.createProject({
+      empresa_rut: createProjectForm.value.empresa_rut,
+      name: createProjectForm.value.name,
+      code: createProjectForm.value.code,
+      year: createProjectForm.value.year,
+      client_name: createProjectForm.value.client_name || null,
+      description: createProjectForm.value.description || null,
+      is_billable_default: createProjectForm.value.is_billable_default,
+    })
+    
+    closeCreateProjectDialog()
+    alert('Proyecto creado exitosamente')
+    
+    // Recargar los proyectos
+    await projectsStore.loadProjects()
+  } catch (err: any) {
+    console.error('Error al crear proyecto:', err)
+    alert(err.message || 'Error al crear proyecto')
+  }
+}
 </script>
 
 <template>
@@ -316,6 +386,11 @@ function handleTaskPageChange(event: { first: number; rows: number }) {
           <h1 class="text-2xl font-bold">Proyectos</h1>
           <p class="text-sm text-muted-foreground">Gestiona los proyectos de la empresa.</p>
         </div>
+        <Button
+          label="Crear Proyecto"
+          icon="pi pi-plus"
+          @click="openCreateProjectDialog"
+        />
       </div>
 
       <div class="px-6 py-6 space-y-4">
@@ -704,6 +779,127 @@ function handleTaskPageChange(event: { first: number; rows: number }) {
           :label="editingTaskId ? 'Actualizar' : 'Crear'"
           @click="handleCreateTask"
           :disabled="!createTaskForm.code || !createTaskForm.name"
+        />
+      </template>
+    </Dialog>
+
+    <Dialog
+      v-model:visible="showCreateProjectDialog"
+      modal
+      header="Crear Proyecto"
+      :style="{ width: '600px' }"
+      @hide="closeCreateProjectDialog"
+    >
+      <div class="space-y-4 py-4">
+        <div class="space-y-2">
+          <label for="empresa-select" class="block text-sm font-medium">
+            Empresa <span class="text-destructive">*</span>
+          </label>
+          <Select
+            id="empresa-select"
+            v-model="createProjectForm.empresa_rut"
+            :options="empresasStore.empresas"
+            optionLabel="razon_social"
+            optionValue="rut"
+            placeholder="Selecciona una empresa"
+            class="w-full"
+            :loading="empresasStore.loading"
+          >
+            <template #option="slotProps">
+              <div class="flex flex-col">
+                <span class="font-medium">{{ slotProps.option.razon_social }}</span>
+                <span class="text-xs text-muted-foreground">{{ slotProps.option.rut }}</span>
+              </div>
+            </template>
+          </Select>
+        </div>
+
+        <div class="space-y-2">
+          <label for="project-name-input" class="block text-sm font-medium">
+            Nombre <span class="text-destructive">*</span>
+          </label>
+          <InputText
+            id="project-name-input"
+            v-model="createProjectForm.name"
+            placeholder="Nombre del proyecto"
+            class="w-full"
+          />
+        </div>
+
+        <div class="space-y-2">
+          <label for="project-code-input" class="block text-sm font-medium">
+            Código <span class="text-destructive">*</span>
+          </label>
+          <InputText
+            id="project-code-input"
+            v-model="createProjectForm.code"
+            placeholder="Ej: PROJ-001"
+            class="w-full"
+          />
+          <p class="text-xs text-muted-foreground">
+            El código debe ser único dentro de la empresa
+          </p>
+        </div>
+
+        <div class="space-y-2">
+          <label for="project-year-input" class="block text-sm font-medium">
+            Año <span class="text-destructive">*</span>
+          </label>
+          <InputNumber
+            id="project-year-input"
+            v-model="createProjectForm.year"
+            :min="2000"
+            :max="2100"
+            placeholder="Año del proyecto"
+            class="w-full"
+          />
+        </div>
+
+        <div class="space-y-2">
+          <label for="client-name-input" class="block text-sm font-medium">Cliente</label>
+          <InputText
+            id="client-name-input"
+            v-model="createProjectForm.client_name"
+            placeholder="Nombre del cliente (opcional)"
+            class="w-full"
+          />
+        </div>
+
+        <div class="space-y-2">
+          <label for="project-description-input" class="block text-sm font-medium">Descripción</label>
+          <Textarea
+            id="project-description-input"
+            v-model="createProjectForm.description"
+            placeholder="Descripción del proyecto (opcional)"
+            class="w-full"
+            rows="3"
+          />
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <label for="is-billable-default-toggle" class="block text-sm font-medium">Facturable por defecto</label>
+            <ToggleSwitch
+              id="is-billable-default-toggle"
+              v-model="createProjectForm.is_billable_default"
+            />
+          </div>
+          <p class="text-xs text-muted-foreground">
+            Indica si las horas trabajadas son facturables por defecto
+          </p>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button
+          label="Cancelar"
+          severity="secondary"
+          @click="closeCreateProjectDialog"
+        />
+        <Button
+          label="Crear"
+          @click="handleCreateProject"
+          :disabled="!createProjectForm.empresa_rut || !createProjectForm.name || !createProjectForm.code || !createProjectForm.year"
         />
       </template>
     </Dialog>

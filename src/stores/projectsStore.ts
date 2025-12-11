@@ -54,10 +54,10 @@ export const useProjectsStore = defineStore('projects', () => {
   })
 
   async function loadProjects() {
-    if (!authStore.profile?.empresa_rut) {
+    /*if (!authStore.profile?.empresa_rut) {
       error.value = 'No hay empresa asociada'
       return
-    }
+    }*/
 
     try {
       loading.value = true
@@ -66,7 +66,7 @@ export const useProjectsStore = defineStore('projects', () => {
       const { data, error: projectsError } = await supabase
         .from('projects')
         .select('*')
-        .eq('empresa_rut', authStore.profile.empresa_rut)
+        //.eq('empresa_rut', authStore.profile.empresa_rut)
         .eq('status', 'active')
         .order('name', { ascending: true })
 
@@ -359,6 +359,59 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
+  async function createProject(params: {
+    empresa_rut: string
+    name: string
+    code: string
+    year: number
+    client_name?: string | null
+    description?: string | null
+    status?: string | null
+    is_billable_default?: boolean | null
+  }) {
+    const { empresa_rut, name, code, year, client_name, description, status, is_billable_default } = params
+
+    if (!empresa_rut || !name || !code || !year) {
+      throw new Error('empresa_rut, name, code y year son requeridos')
+    }
+
+    try {
+      loading.value = true
+      error.value = null
+
+      const { data, error: insertError } = await supabase
+        .from('projects')
+        .insert({
+          empresa_rut,
+          name,
+          code,
+          year,
+          client_name: client_name || null,
+          description: description || null,
+          status: status || 'active',
+          is_billable_default: is_billable_default ?? null,
+          created_by: authStore.user?.id || null,
+        })
+        .select()
+        .single()
+
+      if (insertError) {
+        throw insertError
+      }
+
+      // Agregar el nuevo proyecto a la lista
+      projects.value.push(data as Project)
+      
+      return data as Project
+    } catch (err: any) {
+      console.error('Error creating project:', err)
+      error.value = err.message ?? 'Error al crear proyecto'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     projects,
     assignments,
@@ -381,6 +434,7 @@ export const useProjectsStore = defineStore('projects', () => {
     loadAssignableUsers,
     createProjectAssignment,
     updateProjectAssignment,
+    createProject,
   }
 })
 

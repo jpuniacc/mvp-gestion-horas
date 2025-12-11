@@ -13,7 +13,7 @@ import Skeleton from 'primevue/skeleton';
 import RadioButton from 'primevue/radiobutton';
 import { startOfWeek } from 'date-fns';
 import Header from '@/components/Header.vue';
-import { useReports } from '@/composables/useReports';
+import { useReportsCost } from '@/composables/useReportsCost';
 
 const projectsStore = useProjectsStore()
 const reportsStore = useReportsStore()
@@ -27,7 +27,7 @@ const {
   setChartOptions,
   getTableData,
   getChartType,
-} = useReports()
+} = useReportsCost()
 
 const chartData = ref()
 const chartOptions = ref()
@@ -67,7 +67,6 @@ const groupedProjects = computed(() => {
     }))
 })
 
-
 async function loadReportData() {
   if (!selectedProjectId.value) {
     chartData.value = null
@@ -100,7 +99,7 @@ async function loadReportData() {
 
     // Asegurar que el loading se muestre por al menos 1 segundo
     const [data] = await Promise.all([
-      reportsStore.getReporteHorasProyecto(params),
+      reportsStore.getReporteCostosProyecto(params),
       new Promise(resolve => setTimeout(resolve, 1000))
     ])
     console.log(params)
@@ -162,6 +161,16 @@ function handleWeekEndSelect(event: any) {
   }
 }
 
+// Función para formatear valores como moneda
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('es-CL', {
+    style: 'currency',
+    currency: 'CLP',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value)
+}
+
 onMounted(async () => {
   await projectsStore.loadProjects()
   chartOptions.value = setChartOptions()
@@ -175,8 +184,8 @@ onMounted(async () => {
     <div class="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
       <div class="flex flex-col gap-4 border-b border-border px-6 py-4">
         <div>
-          <h1 class="text-2xl font-bold">Reportes</h1>
-          <p class="text-sm text-muted-foreground">Visualiza y genera reportes de horas trabajadas.</p>
+          <h1 class="text-2xl font-bold">Reportes de Costos</h1>
+          <p class="text-sm text-muted-foreground">Visualiza y genera reportes de costos por proyecto.</p>
         </div>
       </div>
 
@@ -380,19 +389,19 @@ onMounted(async () => {
                 v-for="dataset in chartData.datasets" 
                 :key="dataset.label"
                 :field="dataset.label" 
-                :header="`${dataset.label} (h)`" 
+                :header="`${dataset.label} (CLP)`" 
                 :sortable="false"
               >
                 <template #body="{ data }">
-                  {{ (data[dataset.label] || 0).toFixed(2) }}
+                  {{ formatCurrency(data[dataset.label] || 0) }}
                 </template>
               </Column>
             </template>
             
             <!-- Columna total -->
-            <Column field="total" header="Total (h)" :sortable="false">
+            <Column field="total" header="Total (CLP)" :sortable="false">
               <template #body="{ data }">
-                <span class="font-semibold">{{ (data.total || 0).toFixed(2) }}</span>
+                <span class="font-semibold">{{ formatCurrency(data.total || 0) }}</span>
               </template>
             </Column>
           </DataTable>
@@ -415,4 +424,3 @@ onMounted(async () => {
     </div>
   </div>
 </template>
-
