@@ -179,7 +179,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto">
+  <div class="max-w-7xl mx-auto">
     <Header />
     <div class="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
       <div class="flex flex-col gap-4 border-b border-border px-6 py-4">
@@ -267,16 +267,6 @@ onMounted(async () => {
         </div>
 
         <div class="flex items-center justify-end gap-4">
-          <div class="flex items-center gap-3">
-            <RadioButton 
-              inputId="group-by-dias" 
-              value="dias" 
-              v-model="groupBy" 
-            />
-            <label for="group-by-dias" class="text-sm font-medium text-muted-foreground cursor-pointer">
-              Por días
-            </label>
-          </div>
           <div class="flex items-center gap-3">
             <RadioButton 
               inputId="group-by-semanas" 
@@ -376,27 +366,25 @@ onMounted(async () => {
               header: { class: 'bg-muted/50' }
             }"
           >
-            <!-- Columna de etiqueta (día/semana/tarea/usuario) -->
+            <!-- Columna de etiqueta (usuario/tarea) -->
             <Column field="label" header="Etiqueta" :sortable="false">
               <template #body="{ data }">
                 <span class="font-medium">{{ data.label }}</span>
               </template>
             </Column>
             
-            <!-- Columnas dinámicas para series (cuando hay múltiples datasets) -->
-            <template v-if="chartData?.datasets?.length > 1">
-              <Column 
-                v-for="dataset in chartData.datasets" 
-                :key="dataset.label"
-                :field="dataset.label" 
-                :header="`${dataset.label} (CLP)`" 
-                :sortable="false"
-              >
-                <template #body="{ data }">
-                  {{ formatCurrency(data[dataset.label] || 0) }}
-                </template>
-              </Column>
-            </template>
+            <!-- Columnas dinámicas para labels (semanas) -->
+            <Column 
+              v-for="label in chartData?.labels" 
+              :key="label"
+              :field="label" 
+              :header="`${label} (CLP)`" 
+              :sortable="false"
+            >
+              <template #body="{ data }">
+                {{ formatCurrency(data[label] || 0) }}
+              </template>
+            </Column>
             
             <!-- Columna total -->
             <Column field="total" header="Total (CLP)" :sortable="false">

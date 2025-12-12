@@ -104,58 +104,233 @@ const handleDelete = async () => {
 </script>
 
 <template>
-  <tr class="border-b hover:bg-muted/50 transition-colors">
-    <td class="p-3 sticky left-0 bg-background z-10">
-      <div class="space-y-1">
-        <div class="font-medium">
-          {{ project ? `${project.name} (${project.code})` : entry.project_id || 'Sin proyecto' }}
+  <tr class="timesheet-row">
+    <td class="timesheet-row-project-cell">
+      <div class="timesheet-row-project">
+        <div class="timesheet-row-project-name">
+          <i class="pi pi-folder timesheet-row-project-icon"></i>
+          <span>{{ project ? `${project.name} (${project.code})` : entry.project_id || 'Sin proyecto' }}</span>
         </div>
-        <div v-if="task" class="text-sm text-muted-foreground">
-          {{ task.name }} ({{ task.code }})
+        <div v-if="task" class="timesheet-row-task">
+          <i class="pi pi-list timesheet-row-task-icon"></i>
+          <span>{{ task.name }} ({{ task.code }})</span>
         </div>
-        <div v-else-if="entry.task_id" class="text-sm text-muted-foreground">
-          Tarea: {{ entry.task_id }}
+        <div v-else-if="entry.task_id" class="timesheet-row-task">
+          <i class="pi pi-list timesheet-row-task-icon"></i>
+          <span>Tarea: {{ entry.task_id }}</span>
         </div>
-        <div class="flex items-center gap-2 mt-1">
-          <Badge v-if="entry.is_billable" variant="default" class="text-xs">Facturable</Badge>
+        <div v-if="entry.is_billable" class="timesheet-row-badge">
+          <Badge variant="default" class="timesheet-billable-badge">
+            <i class="pi pi-dollar timesheet-badge-icon"></i>
+            Facturable
+          </Badge>
         </div>
       </div>
     </td>
     <td
       v-for="day in DAYS_OF_WEEK"
       :key="day.key"
-      class="p-2"
+      class="timesheet-row-day-cell"
     >
-      <Input
-        :model-value="dayHours(day.key)"
-        type="number"
-        step="0.25"
-        min="0"
-        :max="8"
-        :disabled="isLocked"
-        :class="{ 'border-destructive': errors[`hours_${day.key}`] }"
-        @update:model-value="(v) => updateDayHours(day.key, String(v))"
-        @blur="editingFields[`hours_${day.key}`] = false"
-        @focus="editingFields[`hours_${day.key}`] = true"
-        class="w-full text-center"
-      />
-      <div v-if="errors[`hours_${day.key}`]" class="text-xs text-destructive mt-1">
-        {{ errors[`hours_${day.key}`] }}
+      <div class="timesheet-input-wrapper">
+        <Input
+          :model-value="dayHours(day.key)"
+          type="number"
+          step="0.25"
+          min="0"
+          :max="8"
+          :disabled="isLocked"
+          :class="['timesheet-input', { 'timesheet-input-error': errors[`hours_${day.key}`] }]"
+          @update:model-value="(v) => updateDayHours(day.key, String(v))"
+          @blur="editingFields[`hours_${day.key}`] = false"
+          @focus="editingFields[`hours_${day.key}`] = true"
+        />
+        <div v-if="errors[`hours_${day.key}`]" class="timesheet-input-error-message">
+          {{ errors[`hours_${day.key}`] }}
+        </div>
       </div>
     </td>
-    <td class="p-3 text-center font-medium">
-      {{ (typeof localEntry.total_hours === 'number' ? localEntry.total_hours : 0).toFixed(2) }}
+    <td class="timesheet-row-total-cell">
+      <div class="timesheet-row-total">
+        {{ (typeof localEntry.total_hours === 'number' ? localEntry.total_hours : 0).toFixed(2) }}
+      </div>
     </td>
-    <td class="p-3">
-      <Button
+    <td class="timesheet-row-actions-cell">
+      <button
         v-if="!isLocked"
-        variant="ghost"
-        size="sm"
+        class="timesheet-delete-button"
         @click="handleDelete"
+        title="Eliminar entrada"
       >
-        Eliminar
-      </Button>
+        <i class="pi pi-trash"></i>
+      </button>
     </td>
   </tr>
 </template>
+
+<style scoped>
+.timesheet-row {
+  border-bottom: 1px solid hsl(var(--border));
+  transition: background-color 0.15s ease-in-out;
+}
+
+.timesheet-row:hover {
+  background: hsl(var(--muted) / 0.3);
+}
+
+.timesheet-row-project-cell {
+  padding: 0.875rem 1rem;
+  position: sticky;
+  left: 0;
+  background: hsl(var(--background));
+  z-index: 5;
+  min-width: 220px;
+}
+
+.timesheet-row:hover .timesheet-row-project-cell {
+  background: hsl(var(--muted) / 0.3);
+}
+
+.timesheet-row-project {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.timesheet-row-project-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: hsl(var(--foreground));
+}
+
+.timesheet-row-project-icon {
+  font-size: 0.875rem;
+  color: hsl(var(--primary));
+  flex-shrink: 0;
+}
+
+.timesheet-row-task {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: hsl(var(--muted-foreground));
+  margin-left: 1.375rem;
+}
+
+.timesheet-row-task-icon {
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.timesheet-row-badge {
+  margin-top: 0.25rem;
+}
+
+.timesheet-billable-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.timesheet-badge-icon {
+  font-size: 0.625rem;
+}
+
+.timesheet-row-day-cell {
+  padding: 0.75rem 0.5rem;
+  min-width: 90px;
+}
+
+.timesheet-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.timesheet-input {
+  width: 100%;
+  text-align: center;
+  padding: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.timesheet-input-error {
+  border-color: hsl(var(--destructive));
+}
+
+.timesheet-input-error-message {
+  font-size: 0.6875rem;
+  color: hsl(var(--destructive));
+  text-align: center;
+  line-height: 1.2;
+}
+
+.timesheet-row-total-cell {
+  padding: 0.875rem 1rem;
+  text-align: center;
+  min-width: 90px;
+}
+
+.timesheet-row-total {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: hsl(var(--foreground));
+}
+
+.timesheet-row-actions-cell {
+  padding: 0.875rem 1rem;
+  text-align: center;
+  min-width: 90px;
+}
+
+.timesheet-delete-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.375rem;
+  background: hsl(var(--background));
+  color: hsl(var(--destructive));
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.timesheet-delete-button:hover {
+  background: hsl(var(--destructive) / 0.1);
+  border-color: hsl(var(--destructive) / 0.5);
+  transform: scale(1.05);
+}
+
+.timesheet-delete-button i {
+  font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+  .timesheet-row-project-cell {
+    min-width: 180px;
+    padding: 0.75rem 0.75rem;
+  }
+  
+  .timesheet-row-day-cell,
+  .timesheet-row-total-cell,
+  .timesheet-row-actions-cell {
+    min-width: 75px;
+    padding: 0.625rem 0.5rem;
+  }
+  
+  .timesheet-input {
+    font-size: 0.8125rem;
+    padding: 0.375rem;
+  }
+}
+</style>
 

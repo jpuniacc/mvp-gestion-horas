@@ -160,7 +160,7 @@ async function handleCreateUser() {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto">
+  <div class="max-w-7xl mx-auto">
     <Header />
     <div class="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
       <div

@@ -415,15 +415,18 @@ export function useReports() {
     const labels = chartData.labels
     const datasets = chartData.datasets
 
-    // Si hay múltiples datasets (series agrupadas)
+    // Si hay múltiples datasets (series agrupadas: usuarios o tareas)
+    // Transponer: cada dataset es una fila, cada label es una columna
     if (datasets.length > 1) {
       const result: any[] = []
-      labels.forEach((label: string, index: number) => {
-        const row: any = { label }
-        datasets.forEach((dataset: any) => {
-          row[dataset.label] = dataset.data[index] || 0
+      datasets.forEach((dataset: any) => {
+        const row: any = { label: dataset.label }
+        // Cada label (día/semana) se convierte en una columna
+        labels.forEach((label: string, index: number) => {
+          row[label] = dataset.data[index] || 0
         })
-        row.total = datasets.reduce((sum: number, dataset: any) => 
+        // Calcular total por fila (suma de todas las columnas)
+        row.total = labels.reduce((sum: number, _label: string, index: number) => 
           sum + (dataset.data[index] || 0), 0
         )
         result.push(row)
@@ -431,12 +434,15 @@ export function useReports() {
       return result
     }
 
-    // Un solo dataset
+    // Un solo dataset (modo defecto)
+    // Transponer: una sola fila con los valores, labels como columnas
     const totalData = datasets[0]?.data || []
-    return labels.map((label: string, index: number) => ({
-      label,
-      total: totalData[index] || 0,
-    }))
+    const row: any = { label: datasets[0]?.label || 'Total' }
+    labels.forEach((label: string, index: number) => {
+      row[label] = totalData[index] || 0
+    })
+    row.total = totalData.reduce((sum: number, value: number) => sum + (value || 0), 0)
+    return [row]
   }
 
   const getChartType = (): 'bar' | 'line' => {

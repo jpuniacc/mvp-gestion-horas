@@ -170,7 +170,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto">
+  <div class="max-w-7xl mx-auto">
     <Header />
     <div class="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
       <div class="flex flex-col gap-4 border-b border-border px-6 py-4">
@@ -367,27 +367,25 @@ onMounted(async () => {
               header: { class: 'bg-muted/50' }
             }"
           >
-            <!-- Columna de etiqueta (día/semana/tarea/usuario) -->
+            <!-- Columna de etiqueta (usuario/tarea) -->
             <Column field="label" header="Etiqueta" :sortable="false">
               <template #body="{ data }">
                 <span class="font-medium">{{ data.label }}</span>
               </template>
             </Column>
             
-            <!-- Columnas dinámicas para series (cuando hay múltiples datasets) -->
-            <template v-if="chartData?.datasets?.length > 1">
-              <Column 
-                v-for="dataset in chartData.datasets" 
-                :key="dataset.label"
-                :field="dataset.label" 
-                :header="`${dataset.label} (h)`" 
-                :sortable="false"
-              >
-                <template #body="{ data }">
-                  {{ (data[dataset.label] || 0).toFixed(2) }}
-                </template>
-              </Column>
-            </template>
+            <!-- Columnas dinámicas para labels (días/semanas) -->
+            <Column 
+              v-for="label in chartData?.labels" 
+              :key="label"
+              :field="label" 
+              :header="`${label} (h)`" 
+              :sortable="false"
+            >
+              <template #body="{ data }">
+                {{ (data[label] || 0).toFixed(2) }}
+              </template>
+            </Column>
             
             <!-- Columna total -->
             <Column field="total" header="Total (h)" :sortable="false">

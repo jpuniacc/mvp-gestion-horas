@@ -126,7 +126,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-6xl mx-auto">
+  <div class="max-w-7xl mx-auto">
     <Header />
     <div class="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
       <div class="flex flex-col gap-4 border-b border-border px-6 py-4 md:flex-row md:items-center md:justify-between">

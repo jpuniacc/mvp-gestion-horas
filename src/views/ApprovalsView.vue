@@ -7,8 +7,6 @@ import Select from 'primevue/select';
 import TreeTable from 'primevue/treetable';
 import Column from 'primevue/column';
 import ProgressSpinner from 'primevue/progressspinner';
-import Button from 'primevue/button';
-import ToggleSwitch from 'primevue/toggleswitch';
 import type { TreeNode } from 'primevue/treenode';
 import { useWeekNavigation } from '@/composables/useWeekNavigation';
 import { useUsersStore } from '@/stores/usersStore';
@@ -463,20 +461,31 @@ async function handleApprove(timesheetWeekId: string) {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto">
+  <div class="max-w-7xl mx-auto">
     <Header />
-    <div class="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
-      <div class="flex flex-col gap-4 border-b border-border px-6 py-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 class="text-2xl font-bold">Aprobaciones</h1>
-          <p class="text-sm text-muted-foreground">Gestiona las horas pendientes de aprobación.</p>
+    <div class="approvals-container">
+      <div class="approvals-header">
+        <div class="approvals-header-grid">
+          <div class="approvals-title-section">
+            <h1 class="approvals-title">
+              <i class="pi pi-check-circle approvals-title-icon"></i>
+              Aprobaciones
+            </h1>
+            <p class="approvals-description">Gestiona las horas pendientes de aprobación.</p>
+          </div>
+          <div class="approvals-navigator-section">
+            <WeekNavigator :navigation="weekNavigation" />
+          </div>
         </div>
-        <WeekNavigator :navigation="weekNavigation" />
       </div>
 
-      <div class="px-6 py-6 space-y-4">
-        <div class="flex items-center gap-4">
-          <div class="space-y-2 max-w-md flex-1">
+      <div class="approvals-content">
+        <div class="approvals-filters">
+          <div class="approvals-filter-project">
+            <label for="project-select" class="approvals-filter-label">
+              <i class="pi pi-folder approvals-filter-icon"></i>
+              Proyecto
+            </label>
             <Select
               id="project-select"
               v-model="selectedProjectId"
@@ -486,47 +495,51 @@ async function handleApprove(timesheetWeekId: string) {
               optionLabel="name"
               optionValue="id"
               placeholder="Selecciona un proyecto"
-              class="w-full"
+              class="approvals-select"
             >
               <template #optiongroup="slotProps">
-                <div class="flex items-center">
-                  <span class="text-sm font-medium">Empresa {{ slotProps.option.label }}</span>
+                <div class="approvals-select-group">
+                  <i class="pi pi-building approvals-select-group-icon"></i>
+                  <span>Empresa {{ slotProps.option.label }}</span>
                 </div>
               </template>
               <template #option="slotProps">
-                <div
-                  class="flex rounded-md text-sm leading-tight hover:bg-muted/60"
-                >
-                  <span class="text-muted-foreground">
-                    {{ slotProps.option.name }}
-                    <span class="text-xs italic text-muted-foreground/80">
-                      ({{ slotProps.option.code }})
-                    </span>
-                  </span>
+                <div class="approvals-select-option">
+                  <span class="approvals-select-option-name">{{ slotProps.option.name }}</span>
+                  <span class="approvals-select-option-code">({{ slotProps.option.code }})</span>
                 </div>
               </template>
             </Select>
           </div>
-          <div class="flex items-center gap-2">
-            <label for="view-mode-toggle" class="text-sm font-medium">Vista por:</label>
-            <ToggleSwitch
-              id="view-mode-toggle"
-              v-model="viewMode"
-              :trueValue="'tareas'"
-              :falseValue="'usuario'"
-              class="ml-2"
-            />
-            <span class="text-sm text-muted-foreground ml-2">
-              {{ viewMode === 'usuario' ? 'Usuario' : 'Tareas' }}
-            </span>
+          <div class="approvals-filter-view">
+            <label for="view-mode-toggle" class="approvals-filter-label">
+              <i class="pi pi-eye approvals-filter-icon"></i>
+              Vista por:
+            </label>
+            <div class="approvals-view-toggle">
+              <button
+                :class="['approvals-view-button', { 'approvals-view-button-active': viewMode === 'usuario' }]"
+                @click="viewMode = 'usuario'"
+              >
+                <i class="pi pi-users"></i>
+                <span>Usuario</span>
+              </button>
+              <button
+                :class="['approvals-view-button', { 'approvals-view-button-active': viewMode === 'tareas' }]"
+                @click="viewMode = 'tareas'"
+              >
+                <i class="pi pi-list"></i>
+                <span>Tareas</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        <div class="pt-4">
-          <div class="relative">
+        <div class="approvals-table-section">
+          <div class="approvals-table-wrapper">
             <div
               v-if="viewMode === 'usuario' ? usersStore.loading : taskStore.loading"
-              class="absolute inset-0 z-10 flex items-center justify-center bg-background/70 backdrop-blur-sm rounded-lg border"
+              class="approvals-loading-overlay"
             >
               <ProgressSpinner style="width: 38px; height: 38px" strokeWidth="4" />
             </div>
@@ -538,48 +551,60 @@ async function handleApprove(timesheetWeekId: string) {
               :expandedKeys="expandedKeys"
               @node-expand="handleNodeExpand"
               @node-collapse="handleNodeCollapse"
-              class="rounded-lg border bg-card"
+              class="approvals-tree-table"
             >
               <Column field="email" :header="viewMode === 'usuario' ? 'Usuario' : 'Tarea'" expander>
                 <template #body="{ node }">
-                  <div v-if="node.leaf && node.data.isLoading" class="flex items-center gap-2">
+                  <div v-if="node.leaf && node.data.isLoading" class="approvals-loading-cell">
                     <ProgressSpinner style="width: 16px; height: 16px" strokeWidth="3" />
-                    <span class="text-xs text-muted-foreground">Cargando...</span>
+                    <span>Cargando...</span>
                   </div>
-                  <div v-else-if="node.leaf && node.data.isEmpty" class="text-sm text-muted-foreground italic">
+                  <div v-else-if="node.leaf && node.data.isEmpty" class="approvals-empty-cell">
                     {{ node.data.message || (viewMode === 'usuario' ? 'Sin tareas para aprobar' : 'Sin usuarios para esta tarea') }}
                   </div>
-                  <div v-else-if="node.leaf" class="text-sm">
+                  <div v-else-if="node.leaf" class="approvals-leaf-cell">
                     <!-- Nodo hoja: muestra tarea en modo usuario, o usuario en modo tareas -->
                     <template v-if="viewMode === 'usuario'">
-                      <div class="font-medium text-foreground">{{ node.data.taskName || 'Tarea sin nombre' }}</div>
-                      <div v-if="node.data.taskCode" class="text-xs text-muted-foreground">
-                        {{ node.data.taskCode }}
+                      <div class="approvals-cell-content">
+                        <i class="pi pi-list approvals-cell-icon"></i>
+                        <div>
+                          <div class="approvals-cell-title">{{ node.data.taskName || 'Tarea sin nombre' }}</div>
+                          <div v-if="node.data.taskCode" class="approvals-cell-subtitle">
+                            {{ node.data.taskCode }}
+                          </div>
+                        </div>
                       </div>
                     </template>
                     <template v-else>
-                      <div class="text-sm font-medium text-foreground">
-                        {{ node.data.name || 'Usuario sin nombre' }}
-                      </div>
-                      <div class="text-xs text-muted-foreground">
-                        {{ node.data.email }}
+                      <div class="approvals-cell-content">
+                        <i class="pi pi-user approvals-cell-icon"></i>
+                        <div>
+                          <div class="approvals-cell-title">{{ node.data.name || 'Usuario sin nombre' }}</div>
+                          <div class="approvals-cell-subtitle">{{ node.data.email }}</div>
+                        </div>
                       </div>
                     </template>
                   </div>
-                  <div v-else>
+                  <div v-else class="approvals-parent-cell">
                     <!-- Nodo padre: muestra usuario en modo usuario, o tarea en modo tareas -->
                     <template v-if="viewMode === 'usuario'">
-                      <div class="text-sm font-medium text-foreground">
-                        {{ node.data.name || 'Usuario sin nombre' }}
-                      </div>
-                      <div class="text-xs text-muted-foreground">
-                        {{ node.data.email }}
+                      <div class="approvals-cell-content">
+                        <i class="pi pi-user approvals-cell-icon"></i>
+                        <div>
+                          <div class="approvals-cell-title">{{ node.data.name || 'Usuario sin nombre' }}</div>
+                          <div class="approvals-cell-subtitle">{{ node.data.email }}</div>
+                        </div>
                       </div>
                     </template>
                     <template v-else>
-                      <div class="font-medium text-foreground">{{ node.data.taskName || 'Tarea sin nombre' }}</div>
-                      <div v-if="node.data.taskCode" class="text-xs text-muted-foreground">
-                        {{ node.data.taskCode }}
+                      <div class="approvals-cell-content">
+                        <i class="pi pi-list approvals-cell-icon"></i>
+                        <div>
+                          <div class="approvals-cell-title">{{ node.data.taskName || 'Tarea sin nombre' }}</div>
+                          <div v-if="node.data.taskCode" class="approvals-cell-subtitle">
+                            {{ node.data.taskCode }}
+                          </div>
+                        </div>
                       </div>
                     </template>
                   </div>
@@ -676,17 +701,19 @@ async function handleApprove(timesheetWeekId: string) {
                   </div>
                 </template>
               </Column>
-              <Column field="actions" header="Acciones" style="width: 120px">
+              <Column field="actions" header="Acciones" style="width: 140px">
                 <template #body="{ node }">
                   <!-- En modo usuario: botón en nodo padre (usuario) solo si está expandido -->
                   <!-- En modo tareas: botón en nodo hoja (usuario) -->
-                  <div v-if="node.data.timesheetWeekId && (viewMode === 'usuario' ? (!node.leaf && expandedKeys[String(node.key)]) : (node.leaf && !node.data.isEmpty && !node.data.isLoading))" class="flex items-center justify-center">
-                    <Button
-                      label="Aprobar"
-                      size="small"
-                      severity="success"
+                  <div v-if="node.data.timesheetWeekId && (viewMode === 'usuario' ? (!node.leaf && expandedKeys[String(node.key)]) : (node.leaf && !node.data.isEmpty && !node.data.isLoading))" class="approvals-actions-cell">
+                    <button
+                      class="approvals-approve-button"
                       @click="handleApprove(node.data.timesheetWeekId)"
-                    />
+                      title="Aprobar semana"
+                    >
+                      <i class="pi pi-check approvals-approve-icon"></i>
+                      <span>Aprobar</span>
+                    </button>
                   </div>
                 </template>
               </Column>
@@ -694,15 +721,378 @@ async function handleApprove(timesheetWeekId: string) {
 
             <div
               v-else
-              class="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground"
+              class="approvals-empty-state"
             >
-              Selecciona un proyecto para ver los usuarios asignados.
+              <i class="pi pi-inbox approvals-empty-icon"></i>
+              <p>Selecciona un proyecto para ver los usuarios asignados.</p>
             </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-
 </template>
+
+<style scoped>
+.approvals-container {
+  background: hsl(var(--card));
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  overflow: hidden;
+}
+
+.approvals-header {
+  border-bottom: 1px solid hsl(var(--border));
+  padding: 0 1rem;
+}
+
+.approvals-header-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.approvals-title-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.approvals-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.approvals-title-icon {
+  font-size: 1.375rem;
+  color: hsl(var(--primary));
+}
+
+.approvals-description {
+  font-size: 0.8125rem;
+  color: hsl(var(--muted-foreground));
+  margin-left: 1.875rem;
+}
+
+.approvals-navigator-section {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.approvals-content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.approvals-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.approvals-filter-project {
+  flex: 1;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.approvals-filter-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: hsl(var(--foreground));
+}
+
+.approvals-filter-icon {
+  font-size: 0.875rem;
+  color: hsl(var(--primary));
+}
+
+.approvals-select {
+  width: 100%;
+}
+
+.approvals-select-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.approvals-select-group-icon {
+  font-size: 0.875rem;
+  color: hsl(var(--primary));
+}
+
+.approvals-select-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.approvals-select-option-name {
+  color: hsl(var(--foreground));
+}
+
+.approvals-select-option-code {
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+
+.approvals-filter-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.approvals-view-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: hsl(var(--muted) / 0.5);
+  border-radius: 0.5rem;
+  padding: 0.25rem;
+}
+
+.approvals-view-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.approvals-view-button:hover {
+  color: hsl(var(--foreground));
+  background: hsl(var(--muted));
+}
+
+.approvals-view-button-active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.approvals-view-button i {
+  font-size: 0.875rem;
+}
+
+.approvals-table-section {
+  margin-top: 0.5rem;
+}
+
+.approvals-table-wrapper {
+  position: relative;
+  background: hsl(var(--card));
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.approvals-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: hsl(var(--background) / 0.7);
+  backdrop-filter: blur(4px);
+  border-radius: 0.75rem;
+}
+
+.approvals-tree-table {
+  border-radius: 0.75rem;
+}
+
+:deep(.approvals-tree-table .p-treetable) {
+  border: none;
+}
+
+:deep(.approvals-tree-table .p-treetable-thead > tr > th) {
+  background: hsl(var(--muted) / 0.5);
+  border-bottom: 2px solid hsl(var(--border));
+  padding: 0.875rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+:deep(.approvals-tree-table .p-treetable-tbody > tr) {
+  border-bottom: 1px solid hsl(var(--border));
+  transition: background-color 0.15s ease-in-out;
+}
+
+:deep(.approvals-tree-table .p-treetable-tbody > tr:hover) {
+  background: hsl(var(--muted) / 0.3);
+}
+
+:deep(.approvals-tree-table .p-treetable-tbody > tr > td) {
+  padding: 0.875rem 1rem;
+}
+
+.approvals-loading-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.approvals-empty-cell {
+  font-size: 0.8125rem;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+
+.approvals-leaf-cell,
+.approvals-parent-cell {
+  font-size: 0.875rem;
+}
+
+.approvals-cell-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.approvals-cell-icon {
+  font-size: 1rem;
+  color: hsl(var(--primary));
+  flex-shrink: 0;
+}
+
+.approvals-cell-title {
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  line-height: 1.4;
+}
+
+.approvals-cell-subtitle {
+  font-size: 0.8125rem;
+  color: hsl(var(--muted-foreground));
+  margin-top: 0.125rem;
+}
+
+.approvals-actions-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.approvals-approve-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid hsl(var(--primary));
+  border-radius: 0.5rem;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.approvals-approve-button:hover {
+  background: hsl(var(--primary) / 0.9);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px 0 hsl(var(--primary) / 0.3);
+}
+
+.approvals-approve-icon {
+  font-size: 0.875rem;
+}
+
+.approvals-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 3rem 1.5rem;
+  border: 1px dashed hsl(var(--border));
+  border-radius: 0.75rem;
+  text-align: center;
+}
+
+.approvals-empty-icon {
+  font-size: 3rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.approvals-empty-state p {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+}
+
+@media (max-width: 768px) {
+  .approvals-header {
+    padding: 0.625rem 1rem;
+  }
+  
+  .approvals-header-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .approvals-title {
+    font-size: 1.125rem;
+  }
+  
+  .approvals-description {
+    margin-left: 1.875rem;
+    font-size: 0.75rem;
+  }
+  
+  .approvals-navigator-section {
+    justify-content: stretch;
+  }
+  
+  .approvals-content {
+    padding: 1rem;
+  }
+  
+  .approvals-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .approvals-filter-project {
+    min-width: 100%;
+  }
+  
+  .approvals-view-toggle {
+    width: 100%;
+  }
+  
+  .approvals-view-button {
+    flex: 1;
+    justify-content: center;
+  }
+}
+</style>
 

@@ -23,13 +23,13 @@ const routes = [
         component: () => import('@/views/TimesheetWeekView.vue'),
       },
     ],
-  },
-  {
+  }, {
     path: '/approvals',
     name: 'approvals',
     component: () => import('@/views/ApprovalsView.vue'),
     meta: { requiresAuth: true, roles: ['admin', 'pm', 'ops'] },
   },
+
   {
     path: '/users',
     name: 'users',

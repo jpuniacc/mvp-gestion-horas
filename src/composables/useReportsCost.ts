@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 
 export type GroupByMode = 'usuario' | 'tarea' | 'defecto'
-export type GroupBy = 'dias' | 'semanas' | 'total'
+export type GroupBy = 'semanas' | 'total'
 
 interface CostReportRow {
   project_id: string
@@ -26,23 +26,21 @@ interface CostReportRow {
 export function useReportsCost() {
   const rawReportData = ref<CostReportRow[]>([])
   const groupByMode = ref<GroupByMode>('defecto')
-  const groupBy = ref<GroupBy>('dias')
+  const groupBy = ref<GroupBy>('semanas')
 
   // Calcular costo total: cost_rate + (billing_rate * hours)
+  // Solo suma cost_rate si hay horas trabajadas (cost_rate es semanal)
   const calculateCost = (row: CostReportRow): number => {
     const costRate = parseFloat(String(row.cost_rate || 0))
     const billingRate = parseFloat(String(row.billing_rate || 0))
     const hours = parseFloat(String(row.hours || 0))
+    
+    // Solo sumar cost_rate si hay horas trabajadas
+    if (hours === 0) {
+      return 0
+    }
+    
     return costRate + (billingRate * hours)
-  }
-
-  // Calcular costo por día específico: (cost_rate / 7) + (billing_rate * hours_day)
-  // Distribuimos cost_rate entre los 7 días y sumamos el billing_rate por las horas del día
-  const calculateCostByDay = (row: CostReportRow, dayHours: number): number => {
-    const costRate = parseFloat(String(row.cost_rate || 0))
-    const billingRate = parseFloat(String(row.billing_rate || 0))
-    const hours = parseFloat(String(dayHours || 0))
-    return (costRate / 7) + (billingRate * hours)
   }
 
   const setChartData = (reportData: CostReportRow[]) => {
@@ -59,30 +57,6 @@ export function useReportsCost() {
       documentStyle.getPropertyValue('--p-yellow-500') || '#eab308',
       documentStyle.getPropertyValue('--p-red-500') || '#ef4444',
     ]
-
-    // DEFECTO + DIAS: Total costos por día
-    if (groupByMode.value === 'defecto' && groupBy.value === 'dias') {
-      const dayTotals = [0, 0, 0, 0, 0, 0, 0]
-      reportData.forEach((row) => {
-        dayTotals[0] += calculateCostByDay(row, row.hours_monday || 0)
-        dayTotals[1] += calculateCostByDay(row, row.hours_tuesday || 0)
-        dayTotals[2] += calculateCostByDay(row, row.hours_wednesday || 0)
-        dayTotals[3] += calculateCostByDay(row, row.hours_thursday || 0)
-        dayTotals[4] += calculateCostByDay(row, row.hours_friday || 0)
-        dayTotals[5] += calculateCostByDay(row, row.hours_saturday || 0)
-        dayTotals[6] += calculateCostByDay(row, row.hours_sunday || 0)
-      })
-
-      return {
-        labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
-        datasets: [{
-          type: 'bar',
-          label: 'Total Costos',
-          backgroundColor: colors[0],
-          data: dayTotals,
-        }],
-      }
-    }
 
     // DEFECTO + SEMANAS: Total costos por semana
     if (groupByMode.value === 'defecto' && groupBy.value === 'semanas') {
@@ -122,41 +96,6 @@ export function useReportsCost() {
           backgroundColor: colors[0],
           data: [total],
         }],
-      }
-    }
-
-    // USUARIO + DIAS: Barras agrupadas - días en X, series por usuario
-    if (groupByMode.value === 'usuario' && groupBy.value === 'dias') {
-      const users = new Set<string>()
-      reportData.forEach((row) => {
-        if (row.full_name) users.add(row.full_name)
-      })
-      const sortedUsers = Array.from(users).sort()
-
-      const datasets = sortedUsers.map((user, index) => {
-        const dayTotals = [0, 0, 0, 0, 0, 0, 0]
-        const userRows = reportData.filter((row) => row.full_name === user)
-        userRows.forEach((row) => {
-          dayTotals[0] += calculateCostByDay(row, row.hours_monday || 0)
-          dayTotals[1] += calculateCostByDay(row, row.hours_tuesday || 0)
-          dayTotals[2] += calculateCostByDay(row, row.hours_wednesday || 0)
-          dayTotals[3] += calculateCostByDay(row, row.hours_thursday || 0)
-          dayTotals[4] += calculateCostByDay(row, row.hours_friday || 0)
-          dayTotals[5] += calculateCostByDay(row, row.hours_saturday || 0)
-          dayTotals[6] += calculateCostByDay(row, row.hours_sunday || 0)
-        })
-
-        return {
-          type: 'bar',
-          label: user,
-          backgroundColor: colors[index % colors.length],
-          data: dayTotals,
-        }
-      })
-
-      return {
-        labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
-        datasets,
       }
     }
 
@@ -225,56 +164,6 @@ export function useReportsCost() {
           backgroundColor: colors[0],
           data: sortedUsers.map(([, total]) => total),
         }],
-      }
-    }
-
-    // TAREA + DIAS: Barras apiladas - días en X, series por tarea
-    if (groupByMode.value === 'tarea' && groupBy.value === 'dias') {
-      const tasks = new Set<string>()
-      reportData.forEach((row) => {
-        if (row.task) tasks.add(row.task)
-      })
-
-      // Calcular totales por tarea para ordenar por mayor aporte
-      const taskTotals = new Map<string, number>()
-      Array.from(tasks).forEach((task) => {
-        const total = reportData
-          .filter((row) => row.task === task)
-          .reduce((sum, row) => sum + calculateCost(row), 0)
-        taskTotals.set(task, total)
-      })
-
-      // Ordenar tareas por total (de mayor a menor)
-      const sortedTasks = Array.from(tasks).sort((taskA, taskB) => {
-        const totalA = taskTotals.get(taskA) || 0
-        const totalB = taskTotals.get(taskB) || 0
-        return totalB - totalA // Orden descendente
-      })
-
-      const datasets = sortedTasks.map((task, index) => {
-        const dayTotals = [0, 0, 0, 0, 0, 0, 0]
-        const taskRows = reportData.filter((row) => row.task === task)
-        taskRows.forEach((row) => {
-          dayTotals[0] += calculateCostByDay(row, row.hours_monday || 0)
-          dayTotals[1] += calculateCostByDay(row, row.hours_tuesday || 0)
-          dayTotals[2] += calculateCostByDay(row, row.hours_wednesday || 0)
-          dayTotals[3] += calculateCostByDay(row, row.hours_thursday || 0)
-          dayTotals[4] += calculateCostByDay(row, row.hours_friday || 0)
-          dayTotals[5] += calculateCostByDay(row, row.hours_saturday || 0)
-          dayTotals[6] += calculateCostByDay(row, row.hours_sunday || 0)
-        })
-
-        return {
-          type: 'bar',
-          label: task,
-          backgroundColor: colors[index % colors.length],
-          data: dayTotals,
-        }
-      })
-
-      return {
-        labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
-        datasets,
       }
     }
 
@@ -374,9 +263,9 @@ export function useReportsCost() {
     const textColorSecondary = documentStyle.getPropertyValue('--p-text-muted-color')
     const surfaceBorder = documentStyle.getPropertyValue('--p-content-border-color')
 
-    // Usar stacked para tarea + dias y tarea + semanas (muchas tareas, mejor apiladas)
+    // Usar stacked para tarea + semanas (muchas tareas, mejor apiladas)
     // Las demás combinaciones usan barras agrupadas
-    const useStacked = groupByMode.value === 'tarea' && (groupBy.value === 'dias' || groupBy.value === 'semanas')
+    const useStacked = groupByMode.value === 'tarea' && groupBy.value === 'semanas'
 
     return {
       indexAxis: 'y' as const, // Hacer los gráficos horizontales
@@ -467,15 +356,18 @@ export function useReportsCost() {
     const labels = chartData.labels
     const datasets = chartData.datasets
 
-    // Si hay múltiples datasets (series agrupadas)
+    // Si hay múltiples datasets (series agrupadas: usuarios o tareas)
+    // Transponer: cada dataset es una fila, cada label es una columna
     if (datasets.length > 1) {
       const result: any[] = []
-      labels.forEach((label: string, index: number) => {
-        const row: any = { label }
-        datasets.forEach((dataset: any) => {
-          row[dataset.label] = dataset.data[index] || 0
+      datasets.forEach((dataset: any) => {
+        const row: any = { label: dataset.label }
+        // Cada label (semana) se convierte en una columna
+        labels.forEach((label: string, index: number) => {
+          row[label] = dataset.data[index] || 0
         })
-        row.total = datasets.reduce((sum: number, dataset: any) => 
+        // Calcular total por fila (suma de todas las columnas)
+        row.total = labels.reduce((sum: number, _label: string, index: number) => 
           sum + (dataset.data[index] || 0), 0
         )
         result.push(row)
@@ -483,12 +375,15 @@ export function useReportsCost() {
       return result
     }
 
-    // Un solo dataset
+    // Un solo dataset (modo defecto)
+    // Transponer: una sola fila con los valores, labels como columnas
     const totalData = datasets[0]?.data || []
-    return labels.map((label: string, index: number) => ({
-      label,
-      total: totalData[index] || 0,
-    }))
+    const row: any = { label: datasets[0]?.label || 'Total' }
+    labels.forEach((label: string, index: number) => {
+      row[label] = totalData[index] || 0
+    })
+    row.total = totalData.reduce((sum: number, value: number) => sum + (value || 0), 0)
+    return [row]
   }
 
   const getChartType = (): 'bar' | 'line' => {

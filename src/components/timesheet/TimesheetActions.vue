@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import Button from '@/components/ui/Button.vue'
 import { useTimesheetStore } from '@/stores/timesheetStore'
 import { TIMESHEET_STATUS } from '@/lib/constants'
 
@@ -52,37 +51,159 @@ const handleCopyPrevious = async () => {
 </script>
 
 <template>
-  <div class="flex items-center gap-4 mt-6">
-    <Button
-      variant="outline"
-      @click="emit('add-row')"
-      :disabled="!canEdit"
-    >
-      ➕ Agregar Fila
-    </Button>
+  <div class="timesheet-actions">
+    <div class="timesheet-actions-group">
+      <button
+        class="action-button action-button-primary"
+        @click="emit('add-row')"
+        :disabled="!canEdit"
+        title="Agregar nueva fila"
+      >
+        <i class="pi pi-plus action-icon"></i>
+        <span>Agregar Fila</span>
+      </button>
+      
+      <button
+        class="action-button action-button-secondary"
+        @click="handleSaveDraft"
+        :disabled="!canEdit"
+        title="Guardar borrador"
+      >
+        <i class="pi pi-save action-icon"></i>
+        <span>Guardar Borrador</span>
+      </button>
+    </div>
     
-    <Button
-      variant="outline"
-      @click="handleSaveDraft"
-      :disabled="!canEdit"
-    >
-      Guardar Borrador
-    </Button>
-    
-    <Button
-      @click="handleSubmit"
-      :disabled="!canSubmit"
-    >
-      Enviar para Aprobación
-    </Button>
-    
-    <Button
-      variant="ghost"
-      @click="handleCopyPrevious"
-      :disabled="!canEdit"
-    >
-      Copiar Semana Anterior
-    </Button>
+    <div class="timesheet-actions-group">
+      <button
+        class="action-button action-button-success"
+        @click="handleSubmit"
+        :disabled="!canSubmit"
+        title="Enviar para aprobación"
+      >
+        <i class="pi pi-send action-icon"></i>
+        <span>Enviar para Aprobación</span>
+      </button>
+      
+      <button
+        class="action-button action-button-ghost"
+        @click="handleCopyPrevious"
+        :disabled="!canEdit"
+        title="Copiar semana anterior"
+      >
+        <i class="pi pi-copy action-icon"></i>
+        <span>Copiar Semana Anterior</span>
+      </button>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.timesheet-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  background: hsl(var(--card));
+  border-radius: 0.75rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.timesheet-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  white-space: nowrap;
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.action-icon {
+  font-size: 0.875rem;
+}
+
+.action-button-primary {
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.action-button-primary:hover:not(:disabled) {
+  background: hsl(var(--primary) / 0.9);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px 0 hsl(var(--primary) / 0.3);
+}
+
+.action-button-secondary {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.action-button-secondary:hover:not(:disabled) {
+  background: hsl(var(--muted));
+  border-color: hsl(var(--primary) / 0.5);
+  color: hsl(var(--primary));
+}
+
+.action-button-success {
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-weight: 600;
+}
+
+.action-button-success:hover:not(:disabled) {
+  background: hsl(var(--primary) / 0.9);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px 0 hsl(var(--primary) / 0.3);
+}
+
+.action-button-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: hsl(var(--muted-foreground));
+}
+
+.action-button-ghost:hover:not(:disabled) {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+@media (max-width: 768px) {
+  .timesheet-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .timesheet-actions-group {
+    width: 100%;
+    flex-direction: column;
+  }
+  
+  .action-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+</style>
 
